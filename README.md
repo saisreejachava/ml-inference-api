@@ -1,3 +1,7 @@
+
+![CI](https://github.com/saisreejachava/ml-inference-api/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 # Real-Time Risk Intelligence Platform
 
 A containerized FastAPI microservices platform for real-time ML inference across two domains:
