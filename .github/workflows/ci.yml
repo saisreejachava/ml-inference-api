@@ -1,0 +1,62 @@
+name: CI/CD — ML Inference API
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install inference service deps
+        run: |
+          pip install -r services/inference_service/requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run tests
+        run: pytest tests/ -v
+        env:
+          REDIS_URL: redis://localhost:6379
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push API Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/api_gateway
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ml-api-gateway:latest
+
+      - name: Build and push Inference Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/inference_service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ml-inference-service:latest
